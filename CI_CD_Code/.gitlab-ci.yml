@@ -1,18 +1,7 @@
-image: docker.latest
-services:
-  - docker(dind) # docker in docker
-
-variables:
-  DOCKER_DRIVER: overlay
-  SPRING_PROFILES_ACTIVE: gitlab-ci
-  USER_GITLAB: khangaikhuu
-  APP_NAME: clean-code-ci
-  REPO: clean-architecture-demo
-
 stages:
   - build
   - test
-  - docker
+  - deploy
 
 maven-build:
   image: maven:3-jdk-8
@@ -21,14 +10,22 @@ maven-build:
   artifacts:
     paths:
       - target/*.jar
+
 maven-test:
   image: maven:3-jdk-8
   stage: test
   script: "mvn clean test"
 
-docker-build:
-  stage: docker
+deploy-staging:
+  image: ruby
+  stage: deploy
+  type: deploy
+  variables:
+    APP_NAME: mein-clean-code-staging
+    HEROKU_API_KEY: $HEROKU_API_KEY_STAGING
+  before_script:
+    - gem install dpl
   script:
-    - docker login -u gitlab-ci-token -p yf5MDrLqi7ky1cyZ1qi_ registry.gitlab.com
-    - docker build -t registry.gitlab.com/khangaikhuu/clean-architecture-demo .
-    - docker push registry.gitlab.com/khangaikhuu/clean-architecture-demo
+    - dpl --provider=heroku --app=$APP_NAME --api-key=$HEROKU_API_KEY_STAGING
+  only:
+    - master
